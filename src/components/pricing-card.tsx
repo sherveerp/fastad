@@ -9,7 +9,7 @@ import {
     CardHeader,
     CardTitle
 } from "./ui/card";
-import { supabase } from "../../supabase/supabase";
+import { supabase } from "../supabase/supabase";
 
 export default function PricingCard({ item, user }: {
     item: any,

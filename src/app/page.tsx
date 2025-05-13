@@ -2,7 +2,7 @@ import Hero from "@/components/hero";
 import Navbar from "@/components/navbar";
 import PricingCard from "@/components/pricing-card";
 import Footer from "@/components/footer";
-import { createClient } from "../../supabase/server";
+import { createClient } from "../supabase/server";
 import {
   ArrowUpRight,
   CheckCircle2,

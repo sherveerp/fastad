@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { createClient } from '../../supabase/client'
+import { createClient } from '../supabase/client'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +11,16 @@ import {
 import { Button } from './ui/button'
 import { UserCircle, Home } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useCallback } from 'react';
 
 export default function DashboardNavbar() {
-  const supabase = createClient()
-  const router = useRouter()
+  const supabase = createClient();
+  const router = useRouter();
+
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  }, [router, supabase]);
 
   return (
     <nav className="w-full border-b border-gray-200 bg-white py-4">
@@ -32,10 +38,7 @@ export default function DashboardNavbar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={async () => {
-                await supabase.auth.signOut()
-                router.push("/")
-              }}>
+              <DropdownMenuItem onClick={handleSignOut}>
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -43,5 +46,5 @@ export default function DashboardNavbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

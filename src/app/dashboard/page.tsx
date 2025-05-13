@@ -1,7 +1,8 @@
 import DashboardNavbar from "@/components/dashboard-navbar";
-import { createClient } from "../../../supabase/server";
-import { InfoIcon, UserCircle } from "lucide-react";
+import { createClient } from "../../supabase/server";
+import { InfoIcon, UserCircle, Video } from "lucide-react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { SubscriptionCheck } from "@/components/subscription-check";
 
 export default async function Dashboard() {
@@ -43,6 +44,24 @@ export default async function Dashboard() {
                 {JSON.stringify(user, null, 2)}
               </pre>
             </div>
+          </section>
+
+          {/* Create Video Section */}
+          <section className="bg-card rounded-xl p-6 border shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-xl flex items-center gap-2">
+                <Video size={20} />
+                Create a Video
+              </h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Launch the video studio to start creating new videos.
+            </p>
+            <Link href="/studio">
+              <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition">
+                Go to Video Studio
+              </button>
+            </Link>
           </section>
         </div>
       </main>
