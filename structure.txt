@@ -1,0 +1,84 @@
+.
+├── README.md
+├── components.json
+├── deploy-webhooks.sh
+├── middleware.ts
+├── next-env.d.ts
+├── next.config.js
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── public
+│   ├── audio
+│   │   └── tonys-voiceover.mp3
+│   └── videos
+│       ├── out-5c4ee634-476e-4b83-a366-e8fab05cec70.mp4
+│       ├── out-5f4ece9e-9d3f-485e-83e3-09f05bfd9cd6.mp4
+│       ├── out-5fd6758c-f7dd-4b0c-8f86-1e4820086de2.mp4
+│       ├── out-bee07fa9-a55d-44a5-acd3-699e761b4a8f.mp4
+│       ├── out-dac387b2-7f0a-4596-a45c-0233d2d67add.mp4
+│       └── out-f50dede3-d5f9-4507-a9ce-8fb01f2dbaff.mp4
+├── remotion
+│   ├── BusinessVideo.tsx
+│   ├── assets
+│   ├── index.tsx
+│   └── styles
+├── remotion.config.ts 
+├── render.ts
+├── src
+│   ├── app
+│   │   ├── (auth)
+│   │   ├── actions.ts
+│   │   ├── api
+│   │   ├── dashboard
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── pricing
+│   │   ├── studio
+│   │   └── success
+│   ├── components
+│   │   ├── dashboard-navbar.tsx
+│   │   ├── footer.tsx
+│   │   ├── form-message.tsx
+│   │   ├── hero.tsx
+│   │   ├── navbar.tsx
+│   │   ├── pricing-card.tsx
+│   │   ├── studio-client.tsx
+│   │   ├── submit-button.tsx
+│   │   ├── subscription-check.tsx
+│   │   ├── supabase-provider.tsx
+│   │   ├── ui
+│   │   └── user-profile.tsx
+│   ├── lib
+│   │   └── utils.ts
+│   ├── middleware.ts
+│   ├── supabase
+│   │   ├── client.ts
+│   │   ├── config.toml
+│   │   ├── functions
+│   │   ├── middleware.ts
+│   │   ├── migrations
+│   │   ├── server.ts
+│   │   └── supabase.ts
+│   ├── types
+│   │   └── supabase.ts
+│   └── utils
+│       ├── auth.ts
+│       └── utils.ts
+├── structure.txt
+├── tailwind.config.ts
+├── tempo.config.json
+├── tmp
+│   ├── 2b64bd57-43fb-4721-bddf-8733ee12a192-props.json
+│   ├── 30eba8ee-37a1-4d5d-bd07-a2622d01dfff-props.json
+│   ├── 6870cfae-38a0-4632-b60d-f57537bfced7-props.json
+│   ├── 8d475659-bcf6-4c12-8d06-99a4730a63e4-props.json
+│   ├── b3175ca5-e44b-4946-810a-228e2db9e983-props.json
+│   ├── bf8aa810-436c-4c38-9c13-945bc80613bd-props.json
+│   ├── ec6e5af9-3c68-475c-9d9b-8bab7d27bf1b-props.json
+│   └── efa0922c-38b1-4a4d-a872-3fd1fb517a4b-props.json
+└── tsconfig.json
+
+24 directories, 58 files

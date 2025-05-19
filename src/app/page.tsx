@@ -1,8 +1,16 @@
-import Hero from "@/components/hero";
-import Navbar from "@/components/navbar";
-import PricingCard from "@/components/pricing-card";
-import Footer from "@/components/footer";
-import { createClient } from "../supabase/server";
+import { cookies } from "next/headers";
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { Database } from "@/types/supabase";
+
+const supabase = createServerComponentClient<Database>({
+  cookies,
+});
+
+import Hero from "@/app/components/hero";
+import Navbar from "@/app/components/navbar";
+import PricingCard from "@/app/components/pricing-card";
+import Footer from "@/app/components/footer";
+import { createClient } from "@/supabase/server";
 import {
   ArrowUpRight,
   CheckCircle2,

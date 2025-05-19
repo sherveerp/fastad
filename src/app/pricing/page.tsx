@@ -1,6 +1,6 @@
-import Navbar from "@/components/navbar";
-import PricingCard from "@/components/pricing-card";
-import { createClient } from "../../supabase/server";
+import Navbar from "@/app/components/navbar";
+import PricingCard from "@/app/components/pricing-card";
+import { createClient } from "@/supabase/server";
 
 export default async function Pricing() {
     const supabase = await createClient();

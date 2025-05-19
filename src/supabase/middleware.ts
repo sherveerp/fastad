@@ -18,11 +18,17 @@ export const updateSession = async (request: NextRequest) => {
       {
         cookies: {
           getAll() {
-            return request.cookies.getAll().map(({ name, value }) => ({
-              name,
-              value,
-            }));
+            try {
+              return req.cookies.getAll().map(({ name, value }) => ({
+                name,
+                value,
+              }));
+            } catch (err) {
+              console.warn("Cookie parse error:", err);
+              return [];
+            }
           },
+
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
               request.cookies.set(name, value);

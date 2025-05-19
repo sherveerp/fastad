@@ -1,27 +1,34 @@
-import { TempoInit } from "@/components/tempo-init";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import "./globals.css";
+import './globals.css';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { SupabaseProvider } from '@/app/components/supabase-provider';
+import type { Database } from '@/types/supabase';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "FastAd",
-  description: "Create short form content for your business.",
+  title: 'FastAd',
+  description: 'Create short form content for your business.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const supabase = createServerComponentClient<Database>({ cookies });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
+    <html lang="en">
       <body className={inter.className}>
-        {children}
-        <TempoInit />
+        <SupabaseProvider initialSession={session}>
+          {children}
+        </SupabaseProvider>
       </body>
     </html>
   );

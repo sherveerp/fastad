@@ -1,15 +1,24 @@
-import { createClient } from "../../supabase/server";
-import { redirect } from "next/navigation";
-import { SubscriptionCheck } from "@/components/subscription-check";
-import DashboardNavbar from "@/components/dashboard-navbar";
-import StudioClient from "@/components/studio-client";
+// src/app/studio/page.tsx
+
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/supabase'
+
+import SubscriptionCheck from '@/app/components/subscription-check'
+import DashboardNavbar   from '@/app/components/dashboard-navbar'
+import StudioClient      from '@/app/components/studio-client'
 
 export default async function StudioPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // use the server‐component factory
+  const supabase = createServerComponentClient<Database>({ cookies })
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
+  // kick out if not signed in
   if (!user) {
-    return redirect("/sign-in");
+    redirect('/sign-in')
   }
 
   return (
@@ -17,5 +26,5 @@ export default async function StudioPage() {
       <DashboardNavbar />
       <StudioClient />
     </SubscriptionCheck>
-  );
+  )
 }

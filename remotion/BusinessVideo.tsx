@@ -1,21 +1,19 @@
-// remotion/BusinessVideo.tsx
-import { AbsoluteFill, Audio, Video } from 'remotion';
+import { AbsoluteFill, Video, Audio, Img } from 'remotion';
 
 export const BusinessVideo: React.FC<{
   businessName: string;
   font: string;
   logoUrl?: string;
-}> = ({ businessName, font }) => {
+  voiceoverUrl?: string;
+  videoUrl: string;
+}> = ({ businessName, font, logoUrl, voiceoverUrl, videoUrl }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
       <Video
-        src="https://cdn.coverr.co/videos/coverr-a-delicious-pepperoni-pizza-6354/1080p.mp4"
+        src={videoUrl}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
-      <Audio
-        src="/audio/tonys-voiceover.mp3"
-        volume={1}
-      />
+      {voiceoverUrl && <Audio src={voiceoverUrl} />}
       <div
         style={{
           position: 'absolute',
@@ -25,11 +23,27 @@ export const BusinessVideo: React.FC<{
           color: 'white',
           fontSize: 80,
           fontFamily: font,
-          textShadow: '2px 2px 8px black'
+          textShadow: '2px 2px 8px black',
         }}
       >
         {businessName}
       </div>
+      {logoUrl && (
+        <Img
+          src={logoUrl}
+          style={{
+            position: 'absolute',
+            top: 40,
+            right: 40,
+            width: 120,
+            height: 120,
+            objectFit: 'contain',
+            borderRadius: 12,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            background: 'white'
+          }}
+        />
+      )}
     </AbsoluteFill>
   );
 };

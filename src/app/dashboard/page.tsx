@@ -1,19 +1,24 @@
-import DashboardNavbar from "@/components/dashboard-navbar";
-import { createClient } from "../../supabase/server";
-import { InfoIcon, UserCircle, Video } from "lucide-react";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { SubscriptionCheck } from "@/components/subscription-check";
+// src/app/dashboard/page.tsx
 
-export default async function Dashboard() {
-  const supabase = await createClient();
+import { cookies } from 'next/headers'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import type { Database } from '@/types/supabase'
+import { redirect } from 'next/navigation'
+import DashboardNavbar from '@/app/components/dashboard-navbar'
+import SubscriptionCheck from '@/app/components/subscription-check'
+import { InfoIcon, UserCircle, Video } from 'lucide-react'
+import Link from 'next/link'
+
+export default async function DashboardPage() {
+  // Pass the cookies helper directly, not wrapped in a lambda
+  const supabase = createServerComponentClient<Database>({ cookies })
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return redirect("/sign-in");
+    redirect('/sign-in')
   }
 
   return (
@@ -21,16 +26,14 @@ export default async function Dashboard() {
       <DashboardNavbar />
       <main className="w-full">
         <div className="container mx-auto px-4 py-8 flex flex-col gap-8">
-          {/* Header Section */}
           <header className="flex flex-col gap-4">
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <div className="bg-secondary/50 text-sm p-3 px-4 rounded-lg text-muted-foreground flex gap-2 items-center">
-              <InfoIcon size="14" />
+              <InfoIcon size={14} />
               <span>This is a protected page only visible to authenticated users</span>
             </div>
           </header>
 
-          {/* User Profile Section */}
           <section className="bg-card rounded-xl p-6 border shadow-sm">
             <div className="flex items-center gap-4 mb-6">
               <UserCircle size={48} className="text-primary" />
@@ -46,7 +49,6 @@ export default async function Dashboard() {
             </div>
           </section>
 
-          {/* Create Video Section */}
           <section className="bg-card rounded-xl p-6 border shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-xl flex items-center gap-2">
@@ -66,5 +68,5 @@ export default async function Dashboard() {
         </div>
       </main>
     </SubscriptionCheck>
-  );
+  )
 }

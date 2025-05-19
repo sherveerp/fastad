@@ -9,22 +9,31 @@
     "remotion-preview": "remotion preview",
     "remotion-render": "remotion render remotion/index.tsx BusinessVideo out/video.mp4",
     "render-custom": "remotion render remotion/index.tsx studio out/video.mp4 --props='{\"businessName\":\"My Cafe\",\"font\":\"avenir\",\"logoUrl\":\"https://yourcdn.com/logo.png\"}'"
-
   },
   "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.14",
+    "@radix-ui/react-icons": "^1.3.2",
+    "@radix-ui/react-label": "^2.1.6",
+    "@radix-ui/react-slot": "^1.2.2",
     "@remotion/cli": "^4.0.305",
     "@remotion/player": "^4.0.305",
     "@remotion/renderer": "^4.0.305",
-    "@supabase/auth-helpers-nextjs": "^0.8.2",
+    "@supabase/auth-helpers-nextjs": "^0.8.7",
+    "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/auth-js": "^2.39.4",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.39.4",
     "axios": "^1.6.8",
+    "class-variance-authority": "^0.7.1",
     "classnames": "^2.3.2",
     "lucide-react": "^0.263.0",
     "next": "14.2.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "remotion": "^4.0.305",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss-animate": "^1.0.7",
+    "uuid": "^11.1.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
