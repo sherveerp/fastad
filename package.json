@@ -8,7 +8,9 @@
     "start": "next start",
     "remotion-preview": "remotion preview",
     "remotion-render": "remotion render remotion/index.tsx BusinessVideo out/video.mp4",
-    "render-custom": "remotion render remotion/index.tsx studio out/video.mp4 --props='{\"businessName\":\"My Cafe\",\"font\":\"avenir\",\"logoUrl\":\"https://yourcdn.com/logo.png\"}'"
+    "render-custom": "remotion render remotion/index.tsx studio out/video.mp4 --props='{\"businessName\":\"My Cafe\",\"font\":\"avenir\",\"logoUrl\":\"https://yourcdn.com/logo.png\"}'",
+    "seed:pexels": "ts-node --esm scripts/seed-pexels.ts"
+
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.14",
@@ -22,12 +24,13 @@
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/auth-js": "^2.39.4",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.39.4",
-    "axios": "^1.6.8",
+    "@supabase/supabase-js": "^2.49.5",
+    "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.3.2",
     "lucide-react": "^0.263.0",
     "next": "14.2.3",
+    "pexels": "^1.4.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "remotion": "^4.0.305",
