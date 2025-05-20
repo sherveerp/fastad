@@ -25,7 +25,7 @@ jobs:
 
       - name: Seed Pexels Assets
         env:
-          NEXT_PUBLIC_SUPABASE_URL:  ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PEXELS_API_KEY:            ${{ secrets.PEXELS_API_KEY }}
         run: |
