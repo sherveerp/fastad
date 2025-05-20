@@ -1,0 +1,49 @@
+# .github/workflows/seed-pexels.yml
+name: Seed Pexels Assets
+
+# Run on a schedule AND allow manual trigger
+on:
+  schedule:
+    # Every day at 3am UTC (adjust as needed)
+    - cron: '0 3 * * *'
+  workflow_dispatch:  # enables “Run workflow” button
+
+jobs:
+  seed-assets:
+    name: Seed Pexels → Supabase
+    runs-on: ubuntu-latest
+    steps:
+
+      # 1) Check out your code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Set up Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # 3) Install dependencies
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      # 4) Run your seed script
+      - name: Seed Pexels Assets
+        env:
+          NEXT_PUBLIC_SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY:      ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PEXELS_API_KEY:                 ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          npm run seed:pexels
+
+      # 5) (Optional) Commit any changes back
+      # - name: Commit updated asset records
+      #   run: |
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "github-actions[bot]@users.noreply.github.com"
+      #     git add src/  # if your script writes files in repo
+      #     git commit -m "chore: update seeded assets"
+      #     git push
