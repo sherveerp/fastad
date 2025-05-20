@@ -18,15 +18,18 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      # <— CHANGE THIS STEP
       - name: Install dependencies (with dev-deps)
+        run: npm ci --include=dev
+
+      # ← Add this step:
+      - name: Install FFmpeg
         run: |
-          npm ci --include=dev
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
       - name: Seed Pexels Assets
         env:
           SUPABASE_URL:              ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           PEXELS_API_KEY:            ${{ secrets.PEXELS_API_KEY }}
-        run: |
-          npm run seed:pexels
+        run: npm run seed:pexels
