@@ -24,7 +24,10 @@ export default async function StudioPage() {
   return (
     <SubscriptionCheck>
       <DashboardNavbar />
-      <StudioClient />
+      <main className="p-8">
+        <h1 className="text-3xl font-bold mb-4">Video Studio</h1>
+        <StudioClient />
+      </main>
     </SubscriptionCheck>
   )
 }
