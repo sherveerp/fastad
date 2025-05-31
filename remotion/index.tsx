@@ -1,28 +1,42 @@
 import { registerRoot, Composition } from 'remotion';
-import { BusinessVideo } from './BusinessVideo';
+import { BusinessVideo, Storyboard } from './BusinessVideo';
+
+const demoStoryboard: Storyboard = {
+  sequence: [
+    {
+      clip: 'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip1.mp4',
+      text: 'Welcome to Demo Business',
+      duration: 5
+    },
+    {
+      clip: 'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip2.mp4',
+      text: 'Your trusted solution.',
+      duration: 5
+    },
+    {
+      clip: 'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip3.mp4',
+      text: 'Let’s grow together.',
+      duration: 5
+    }
+  ],
+  voiceover: 'Welcome to Demo Business. Your trusted solution. Let’s grow together.'
+};
+
+const totalDurationFrames = 30 + demoStoryboard.sequence.reduce((sum, step) => sum + step.duration * 30, 0);
 
 registerRoot(() => (
   <Composition
     id="studio"
     component={BusinessVideo}
-    durationInFrames={30 + 60 * 3}  // title + 3 clips of 60f each = 210f
+    durationInFrames={totalDurationFrames}
     fps={30}
     width={1080}
     height={1920}
     defaultProps={{
-      businessName: 'Demo Business',
+      storyboard: demoStoryboard,
       font: 'Helvetica',
       logoUrl: '',
-
-      // fallback voiceover (optional)
-      voiceoverUrl: '',
-
-      // fallback clips: replace these with real 5s vertical mp4 URLs if you want a preview
-      clips: [
-        'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip1.mp4',
-        'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip2.mp4',
-        'https://your-supabase-url/storage/v1/object/public/video-assets/assets/clips/demo/clip3.mp4',
-      ],
+      voiceoverUrl: '', // optional for preview
     }}
   />
 ));
