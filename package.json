@@ -10,6 +10,7 @@
     "remotion-render": "remotion render remotion/index.tsx BusinessVideo out/video.mp4",
     "render-custom": "remotion render remotion/index.tsx studio out/video.mp4 --props='{\"businessName\":\"My Cafe\",\"font\":\"avenir\",\"logoUrl\":\"https://yourcdn.com/logo.png\"}'",
     "seed:pexels": "tsx scripts/seed-pexels.ts"
+    
   },
   "dependencies": {
     "@google/generative-ai": "^0.6.0",
@@ -28,6 +29,8 @@
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.3.2",
+    "concurrently": "^9.1.2",
+    "fastest-levenshtein": "^1.0.16",
     "lucide-react": "^0.263.0",
     "next": "14.2.3",
     "pexels": "^1.4.0",

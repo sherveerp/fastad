@@ -48,69 +48,78 @@ export async function POST(req: Request) {
       }
     }
 
-    // Process video clips
-await fs.mkdir('./public/videos', { recursive: true });
-const processedClips: string[] = [];
+    // Process and upload clips
+    const processedClips: string[] = [];
 
-for (const clipUrl of clips) {
-  const clipName = path.basename(clipUrl);
-  const uuid = uuidv4();
-  const baseName = `${uuid}-${clipName}`;
-  const rawClipPath = path.resolve(`/tmp/${baseName}`);
-  const finalClipPath = path.resolve(`./public/videos/${baseName}`);
-  const publicClipPath = `/videos/${baseName}`;
+    for (const clipUrl of clips) {
+      const clipName = path.basename(clipUrl);
+      const uuid = uuidv4();
+      const baseName = `${uuid}-${clipName}`;
+      const rawClipPath = path.resolve(`/tmp/${baseName}`);
+      const finalClipPath = path.resolve(`/tmp/processed-${baseName}`);
 
-  const res = await fetch(clipUrl);
-  if (!res.ok) throw new Error(`Failed to fetch clip: ${clipUrl}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
-  await fs.writeFile(rawClipPath, buffer);
+      // Download clip
+      const res = await fetch(clipUrl);
+      if (!res.ok) throw new Error(`Failed to fetch clip: ${clipUrl}`);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      await fs.writeFile(rawClipPath, buffer);
 
-  await new Promise<void>((resolve, reject) => {
-  const ffmpeg = spawn('ffmpeg', [
-    '-i', rawClipPath,
-    '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
-    '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-c:a', 'aac',
-    '-b:a', '128k',
-    '-movflags', '+faststart',
-    '-y',
-    finalClipPath,
-  ]);
+      // Preprocess clip
+      await new Promise<void>((resolve, reject) => {
+        const ffmpeg = spawn('ffmpeg', [
+          '-i', rawClipPath,
+          '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
+          '-c:v', 'libx264',
+          '-preset', 'veryfast',
+          '-c:a', 'aac',
+          '-b:a', '128k',
+          '-movflags', '+faststart',
+          '-y',
+          finalClipPath,
+        ]);
 
-  ffmpeg.stderr.on('data', chunk => console.error(`[ffmpeg stderr] ${chunk.toString()}`));
+        ffmpeg.stderr.on('data', (chunk) =>
+          console.error(`[ffmpeg stderr] ${chunk.toString()}`)
+        );
 
-  ffmpeg.on('close', async code => {
-    if (code === 0) {
-      try {
-        await fs.access(finalClipPath); // ✅ Check if file really exists
-        processedClips.push(`/videos/${baseName}`);
-        console.log('✅ Verified and added clip:', finalClipPath);
-        console.log('📁 Public clip reference:', publicClipPath);
+        ffmpeg.on('close', async (code) => {
+          if (code !== 0) {
+            reject(new Error(`ffmpeg exited with code ${code}`));
+            return;
+          }
 
-        resolve();
-      } catch (accessErr) {
-        reject(new Error(`❌ Clip not found after ffmpeg: ${finalClipPath}`));
-      }
-    } else {
-      reject(new Error(`ffmpeg exited with code ${code}`));
-    }
+          try {
+            const processedBuffer = await fs.readFile(finalClipPath);
+            const supabaseKey = `clips/${baseName}`;
+const { error: uploadErr } = await supabase.storage
+  .from('processed-clips')
+  .upload(supabaseKey, processedBuffer, {
+    contentType: 'video/mp4',
+    upsert: true, // allow overwriting if already exists
   });
-});
-
-}
-for (const clip of processedClips) {
-  const filePath = path.resolve(`./public${clip}`);
-  try {
-    await fs.access(filePath);
-    console.log('✅ Verified clip file exists:', filePath);
-  } catch (err) {
-    console.error('❌ Missing file before render:', filePath);
-    throw new Error(`Clip not found: ${filePath}`);
-  }
+            if (uploadErr) {
+  console.error('❌ Supabase upload error:', uploadErr);
+  console.error('👤 Upload attempted by user:', user);
+  console.error('📦 Bucket:', 'processed-clips', 'Path:', supabaseKey);
+  throw new Error('Failed to upload processed clip');
 }
 
 
+            const { data: { publicUrl } } = supabase.storage
+              .from('processed-clips')
+              .getPublicUrl(supabaseKey);
+
+            processedClips.push(publicUrl);
+            console.log('✅ Uploaded & using clip:', publicUrl);
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+    }
+
+    // Generate storyboard
     const storyboard = await generateStoryboard(businessName, category, processedClips);
 
     // Voiceover
@@ -122,14 +131,18 @@ for (const clip of processedClips) {
       .from('voiceovers')
       .upload(voiceKey, voiceBuffer, { contentType: 'audio/mpeg' });
     if (voiceErr) throw new Error('Failed to upload voiceover');
-    const { data: { publicUrl: voiceoverUrl } } = supabase.storage.from('voiceovers').getPublicUrl(voiceKey);
+    const { data: { publicUrl: voiceoverUrl } } = supabase.storage
+      .from('voiceovers')
+      .getPublicUrl(voiceKey);
 
     // Background music
     const musicKey = 'upbeat-funk-commercial-advertising-music-253434.mp3';
-    const { data: { publicUrl: backgroundMusicUrl } } = supabase.storage.from('bg-music').getPublicUrl(musicKey);
+    const { data: { publicUrl: backgroundMusicUrl } } = supabase.storage
+      .from('bg-music')
+      .getPublicUrl(musicKey);
     if (!backgroundMusicUrl) throw new Error('Failed to get background music');
 
-    // Prepare props for Remotion
+    // Render props
     const renderProps = {
       storyboard,
       font,
@@ -143,31 +156,40 @@ for (const clip of processedClips) {
     const propsPath = path.resolve(`./tmp/${uuidv4()}-props.json`);
     await fs.mkdir(path.dirname(propsPath), { recursive: true });
     await fs.writeFile(propsPath, JSON.stringify(renderProps));
-console.log('🧪 Final processedClips for Remotion:', processedClips);
 
-    // Remotion render
+    console.log('🧪 Final processedClips for Remotion:', processedClips);
+
+    // Render video
     await new Promise<void>((resolve, reject) => {
-      const proc = spawn('npx', [
-        'remotion', 'render',
-        'studio',
-        '--composition', 'studio',
-        '--output', outPath,
-        `--props=${propsPath}`,
-      ], { shell: true });
+      const proc = spawn(
+        'npx',
+        ['remotion', 'render', 'studio', '--composition', 'studio', '--output', outPath, `--props=${propsPath}`],
+        { shell: true }
+      );
 
-      proc.stdout.on('data', chunk => console.log(`[remotion stdout] ${chunk.toString()}`));
-      proc.stderr.on('data', chunk => console.error(`[remotion stderr] ${chunk.toString()}`));
-      proc.on('close', code => code === 0 ? resolve() : reject(new Error(`Remotion exited with ${code}`)));
+      proc.stdout.on('data', (chunk) =>
+        console.log(`[remotion stdout] ${chunk.toString()}`)
+      );
+      proc.stderr.on('data', (chunk) =>
+        console.error(`[remotion stderr] ${chunk.toString()}`)
+      );
+      proc.on('close', (code) =>
+        code === 0 ? resolve() : reject(new Error(`Remotion exited with ${code}`))
+      );
     });
 
+    // Upload video
     const videoBuffer = await fs.readFile(outPath);
     const videoKey = `final-videos/${outName}`;
     const { error: uploadError } = await supabase.storage
       .from('final-videos')
       .upload(videoKey, videoBuffer, { contentType: 'video/mp4' });
     if (uploadError) throw uploadError;
-    const { data: { publicUrl: videoUrl } } = supabase.storage.from('final-videos').getPublicUrl(videoKey);
+    const { data: { publicUrl: videoUrl } } = supabase.storage
+      .from('final-videos')
+      .getPublicUrl(videoKey);
 
+    // Save DB record
     await supabase.from('video_prompts').insert({
       user_id: user.id,
       business_name: businessName,
@@ -179,7 +201,6 @@ console.log('🧪 Final processedClips for Remotion:', processedClips);
     });
 
     return NextResponse.json({ videoUrl, logoUrl, storyboard });
-
   } catch (err: any) {
     console.error('❌ /api/render-video error:', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });

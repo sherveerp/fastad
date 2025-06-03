@@ -31,32 +31,43 @@ export default function StudioClient() {
   };
 
   // Step 2: Search for clips in storage
-  const handleSearchClips = async () => {
-    if (!category.trim()) {
-      setClipError('Please enter a category to search.');
-      return;
-    }
-    setClipLoading(true);
-    setClipError(null);
-    setClips(null);
+const [suggestion, setSuggestion] = useState<string | null>(null);
 
-    try {
-      const res = await fetch(`/api/clips?category=${encodeURIComponent(category)}`);
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error || 'Failed to fetch clips');
-      }
-      if (!body.clips || body.clips.length === 0) {
-        setClipError("Sorry, we don't support your business yet.");
-      } else {
-        setClips(body.clips);
-      }
-    } catch (err: any) {
-      setClipError(err.message || 'Network error fetching clips');
-    } finally {
-      setClipLoading(false);
+const handleSearchClips = async () => {
+  if (!category.trim()) {
+    setClipError('Please enter a category to search.');
+    return;
+  }
+  setClipLoading(true);
+  setClipError(null);
+  setClips(null);
+  setSuggestion(null);
+
+  try {
+    const res = await fetch(`/api/clips?category=${encodeURIComponent(category)}`);
+    const body = await res.json();
+
+    if (!res.ok) {
+      throw new Error(body.error || 'Failed to fetch clips');
     }
-  };
+
+    if (!body.clips || body.clips.length === 0) {
+      if (body.suggestion) {
+        setSuggestion(body.suggestion);
+        setClipError(`We couldn't find clips for "${category}".`);
+      } else {
+        setClipError("Sorry, we don't support your business yet.");
+      }
+    } else {
+      setClips(body.clips);
+    }
+  } catch (err: any) {
+    setClipError(err.message || 'Network error fetching clips');
+  } finally {
+    setClipLoading(false);
+  }
+};
+
 
   // Step 3: Generate final video
 // inside StudioClient:
@@ -184,10 +195,27 @@ const handleGenerate = async () => {
       )}
 
       {/* === Step 2: clip-loading & errors === */}
-      {creating && clipLoading && <p>Loading clips…</p>}
       {creating && clipError && (
-        <p className="text-red-600">{clipError}</p>
+        <div className="text-red-600 space-y-2">
+          <p>{clipError}</p>
+          {suggestion && (
+            <div className="text-yellow-700 bg-yellow-100 p-2 rounded-md">
+              Did you mean{' '}
+              <button
+                onClick={() => {
+                  setCategory(suggestion);
+                  handleSearchClips(); // Retry with suggestion
+                }}
+                className="underline font-semibold"
+              >
+                {suggestion}
+              </button>
+              ?
+            </div>
+          )}
+        </div>
       )}
+
 
       {/* === Step 3: preview clips & generate button === */}
       {creating && clips && (

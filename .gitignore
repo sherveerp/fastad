@@ -50,3 +50,11 @@ node_modules/
 .git
 
 .github/
+
+
+# Ignore all video and audio output
+public/videos/
+tmp/
+*.mp4
+*.mp3
+*.zip
