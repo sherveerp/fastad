@@ -1,13 +1,15 @@
 # .github/workflows/seed-pexels.yml
 name: Seed Pexels Assets
 
-on:
-  schedule:
-    - cron: '0 3 * * *'
-  workflow_dispatch:
+# All triggers are commented out to disable automatic and manual runs
+# on:
+#   schedule:
+#     - cron: '0 3 * * *'  # DISABLED: runs daily at 3 AM UTC
+#   workflow_dispatch:     # DISABLED: manual run from UI
 
 jobs:
   seed-assets:
+    if: false  # ensures job never runs even if triggered
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,7 +23,6 @@ jobs:
       - name: Install dependencies (with dev-deps)
         run: npm ci --include=dev
 
-      # ← Add this step:
       - name: Install FFmpeg
         run: |
           sudo apt-get update
