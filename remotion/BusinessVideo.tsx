@@ -1,4 +1,5 @@
 import { AbsoluteFill, Sequence, Video, Audio, Img } from 'remotion';
+import { ThemedText } from './themed-text';
 
 export type Storyboard = {
   sequence: {
@@ -12,13 +13,22 @@ export type Storyboard = {
 export const BusinessVideo: React.FC<{
   storyboard: Storyboard;
   clips: string[];
+  theme: string;
   font: string;
   logoUrl?: string;
   voiceoverUrl?: string;
   backgroundMusicUrl?: string;
-}> = ({ storyboard, clips, font, logoUrl, voiceoverUrl, backgroundMusicUrl }) => {
-  let frameOffset = 30;
+}> = ({
+  storyboard,
+  clips,
+  theme,
+  font,
+  logoUrl,
+  voiceoverUrl,
+  backgroundMusicUrl,
+}) => {
   const fps = 30;
+  let frameOffset = 30;
 
   // Build each clip/text sequence
   const sequences = storyboard.sequence.map((item, index) => {
@@ -26,21 +36,18 @@ export const BusinessVideo: React.FC<{
     const durationFrames = Math.round(item.duration * fps);
     frameOffset += durationFrames;
 
-    // Pull the URL from the same index in `clips[]`
-    const fullClipUrl = clips[index] ? clips[index] : '';
-
-    console.log('🎞 Video path for clip:', fullClipUrl);
+    const fullClipUrl = clips[index] ?? '';
 
     return (
       <Sequence key={index} from={startFrame} durationInFrames={durationFrames}>
         <AbsoluteFill>
-          {fullClipUrl !== '' ? (
+          {fullClipUrl ? (
             <Video
               src={fullClipUrl}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                console.error('❌ Video failed to load:', fullClipUrl, e);
-              }}
+              onError={(e) =>
+                console.error('❌ Video failed to load:', fullClipUrl, e)
+              }
             />
           ) : (
             <AbsoluteFill style={{ backgroundColor: 'gray' }} />
@@ -52,14 +59,9 @@ export const BusinessVideo: React.FC<{
               justifyContent: 'center',
               alignItems: 'center',
               textAlign: 'center',
-              color: 'white',
-              fontSize: 60,
-              fontFamily: font,
-              padding: '0 60px',
-              textShadow: '2px 2px 6px black',
             }}
           >
-            {item.text}
+            <ThemedText text={item.text} theme={theme} font={font} />
           </AbsoluteFill>
         </AbsoluteFill>
       </Sequence>
@@ -81,7 +83,7 @@ export const BusinessVideo: React.FC<{
             backgroundColor: 'black',
           }}
         >
-          {logoUrl ? (
+          {logoUrl && (
             <Img
               src={logoUrl}
               style={{
@@ -91,38 +93,30 @@ export const BusinessVideo: React.FC<{
                 marginBottom: 40,
               }}
             />
-          ) : null}
-          <div
-            style={{
-              color: 'white',
-              fontSize: 100,
-              fontFamily: font,
-              textAlign: 'center',
-              textShadow: '2px 2px 8px black',
-            }}
-          >
-            {storyboard.sequence.length > 0
-              ? storyboard.sequence[0].text
-              : 'Welcome'}
-          </div>
+          )}
+          <ThemedText
+            text={storyboard.sequence[0]?.text || 'Welcome'}
+            theme={theme}
+            font={font}
+          />
         </AbsoluteFill>
       </Sequence>
 
       {/* Voiceover track */}
-      {voiceoverUrl ? (
+      {voiceoverUrl && (
         <Sequence from={0} durationInFrames={totalFrames}>
           <Audio src={voiceoverUrl} />
         </Sequence>
-      ) : null}
+      )}
 
       {/* Background music */}
-      {backgroundMusicUrl ? (
+      {backgroundMusicUrl && (
         <Sequence from={0} durationInFrames={totalFrames}>
           <Audio src={backgroundMusicUrl} volume={0.2} />
         </Sequence>
-      ) : null}
+      )}
 
-      {/* The main sequences */}
+      {/* Main video sequences */}
       {sequences}
     </AbsoluteFill>
   );

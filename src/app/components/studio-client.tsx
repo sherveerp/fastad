@@ -36,6 +36,8 @@ export default function StudioClient() {
   const [videosLoading, setVideosLoading] = useState(false);
   const [videosError, setVideosError] = useState<string | null>(null);
 
+  const [theme, setTheme] = useState('minimalist');
+
   const supabase = useSupabaseClient();
   const user = useUser();
 
@@ -155,11 +157,13 @@ const handleGenerateStoryboard = useCallback(async () => {
       const form = new FormData();
       form.append('businessName', businessName);
       form.append('category', category);
+      form.append('theme', theme);
       clips?.forEach((u) => form.append('clips', u));
      // ✏️ Send the edited storyboard JSON
       if (storyboardObj) {
       form.append('storyboard', JSON.stringify(storyboardObj.sequence));
       form.append('voiceover', storyboardObj.voiceover);
+      
     }
       if (logoFile) form.append('logo', logoFile);
       const res = await fetch('/api/render-video', { method: 'POST', body: form });
@@ -234,6 +238,18 @@ const handleGenerateStoryboard = useCallback(async () => {
               onChange={e => setCategory(e.target.value)}
               className="border rounded-lg p-2"
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Theme</label>
+              <select
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+              >                
+                <option value="minimalist">Minimalist</option>
+                <option value="bold">Bold & Colorful</option>
+                <option value="typewriter">Typewriter</option>
+              </select>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Upload Logo (optional)</label>
@@ -334,8 +350,11 @@ const handleGenerateStoryboard = useCallback(async () => {
 
       {responseText && <div className="mt-4 p-4 bg-muted/50 rounded-md text-sm">{responseText}</div>}
       {videoUrl && (
-        <video src={videoUrl} controls className="w-full mt-4 rounded-lg border shadow-sm" />
-      )}
+        <video
+          src={videoUrl}
+          controls
+          className="w-96 mx-auto mt-4 rounded-lg border shadow-sm"
+        />      )}
     </main>
   );
 }

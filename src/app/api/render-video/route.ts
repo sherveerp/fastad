@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     const logoFile = formData.get('logo') as File | null;
     const clips = formData.getAll('clips') as string[];
     const videoId = formData.get('videoId') as string | null;
+    const theme = formData.get('theme') as string;
 
     const editedStoryboard = formData.get('storyboard') as string | null;
     const editedVoiceover = formData.get('voiceover') as string | null;
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
 
     const backgroundMusicUrl = supabase.storage.from('bg-music').getPublicUrl('upbeat-funk-commercial-advertising-music-253434.mp3').data.publicUrl;
 
-    const renderProps = { storyboard, clips: processedClips, font, logoUrl, voiceoverUrl, backgroundMusicUrl };
+    const renderProps = { storyboard, clips: processedClips, font, logoUrl, voiceoverUrl, backgroundMusicUrl , theme};
     const propsFile = `/tmp/props-${uuidv4()}.json`;
     await fs.writeFile(propsFile, JSON.stringify(renderProps));
 
