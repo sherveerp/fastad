@@ -51,11 +51,16 @@ async function getBucketUsageBytes(): Promise<number> {
 }
 
 // Pick best clip ≤1280 px wide
-function pickResolutionFile(vid: Video, maxWidth = 1280) {
-  const c = vid.video_files
-    .filter(f => f.width <= maxWidth)
+function pickVerticalResolutionFile(vid: Video, maxWidth = 1280) {
+  const verticalClips = vid.video_files
+    .filter(f => f.width <= maxWidth && f.height > f.width)
     .sort((a, b) => b.width - a.width)
-  return c.length ? c[0] : vid.video_files[0]
+
+  if (verticalClips.length === 0) {
+    throw new Error(`No vertical clips available for video ID ${vid.id}`)
+  }
+
+  return verticalClips[0]
 }
 
 // Transcode: trim to 5 s, remove audio, scale/pad to 720×1280 vertical
@@ -94,20 +99,17 @@ async function transcodeVideo(input: Buffer): Promise<Buffer> {
 async function seedCategoryFromPexels(category: string, perPage = 10) {
   console.log(`--- Seeding category: ${category} (${perPage} clips) ---`)
 
-  // 1️⃣ Check bucket usage
   const used = await getBucketUsageBytes()
-  console.log(`🔍 Bucket usage: ${(used/1024/1024).toFixed(1)} MB`)
+  console.log(`🔍 Bucket usage: ${(used / 1024 / 1024).toFixed(1)} MB`)
   if (used >= THRESHOLD_BYTES) {
     console.log(`⚠️  Usage ≥ 500 MB—skipping category ${category}`)
     return
   }
 
-  // 2️⃣ Fetch Pexels videos
-  const res    = await pexels.videos.search({ query: category, per_page: perPage })
+  const res = await pexels.videos.search({ query: category, per_page: perPage })
   const videos = res.videos
 
   for (const vid of videos) {
-    // re-check before each upload
     const before = await getBucketUsageBytes()
     if (before >= THRESHOLD_BYTES) {
       console.log(`⚠️  Hit 500 MB limit mid-category—stopping`)
@@ -115,15 +117,12 @@ async function seedCategoryFromPexels(category: string, perPage = 10) {
     }
 
     try {
-      // 3️⃣ Pick & download clip
-      const file = pickResolutionFile(vid)
+      const file = pickVerticalResolutionFile(vid)
       console.log(`   🎥 [${vid.id}] ${file.width}×${file.height}, ${vid.duration}s`)
       const rawBuf = await fetchBuffer(file.link)
 
-      // 4️⃣ Transcode to 5 s vertical/no-audio
       const finalBuf = await transcodeVideo(rawBuf)
 
-      // 5️⃣ Upload
       const remote = `assets/clips/${category}/${uuidv4()}.mp4`
       const { error: upErr } = await supabase.storage
         .from(BUCKET_ID)
@@ -132,12 +131,12 @@ async function seedCategoryFromPexels(category: string, perPage = 10) {
           cacheControl: '3600',
           upsert: false,
         })
+
       if (upErr) {
         console.error(`❌ Upload failed for ${vid.id}`, upErr)
         continue
       }
 
-      // 6️⃣ Record in `assets` table
       const { data: { publicUrl } } = supabase.storage
         .from(BUCKET_ID)
         .getPublicUrl(remote)
@@ -151,11 +150,12 @@ async function seedCategoryFromPexels(category: string, perPage = 10) {
           weight: 1,
           metadata: {
             pexelsId: vid.id,
-            width:    720,
-            height:   1280,
+            width: 720,
+            height: 1280,
             duration: Math.min(vid.duration, 5),
           },
         })
+
       if (dbErr) {
         console.error(`❌ DB insert failed for ${publicUrl}`, dbErr)
       } else {
@@ -193,6 +193,26 @@ async function main() {
     { name: 'burgers',           count: 15 },
     { name: 'indian restaurant', count: 15 },
     { name: 'italian restaurant',count: 15 },
+    { name: 'bubble tea', count: 15 },
+    { name: 'boutique hotel', count: 15 },
+    { name: 'crossfit gym', count: 15 },
+    { name: 'juice bar', count: 15 },
+    { name: 'tattoo studio', count: 15 },
+    { name: 'vegan cafe', count: 15 },
+    { name: 'food truck', count: 15 },
+    { name: 'spa', count: 15 },
+    { name: 'dentist', count: 15 },
+    { name: 'co-working space', count: 15 },
+    { name: 'martial arts studio', count: 15 },
+    { name: 'car detailing', count: 15 },
+    { name: 'home decor', count: 15 },
+    { name: 'luxury watches', count: 15 },
+    { name: 'escape room', count: 15 },
+    { name: 'skincare clinic', count: 15 },
+    { name: 'wedding planner', count: 15 },
+    { name: 'pet grooming', count: 15 },
+    { name: 'arcade', count: 15 },
+    { name: 'outdoor gear store', count: 15 },
   ]
 
   for (const { name, count } of categories) {
