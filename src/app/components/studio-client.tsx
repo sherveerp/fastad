@@ -1,260 +1,340 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
+
+interface StoryItem {
+  clip: string | null;
+  text: string;
+  duration: number;
+}
+
+interface Storyboard {
+  sequence: StoryItem[];
+  voiceover: string;
+}
 
 export default function StudioClient() {
-  // overall flow
   const [creating, setCreating] = useState(false);
-
-  // form inputs
   const [businessName, setBusinessName] = useState('');
-  const [category, setCategory]         = useState('');
-  const [logoFile, setLogoFile]         = useState<File | null>(null);
+  const [category, setCategory] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
-  // clip search state
-  const [clipLoading, setClipLoading] = useState(false);
-  const [clips, setClips]             = useState<string[] | null>(null);
-  const [clipError, setClipError]     = useState<string | null>(null);
+  const [clipLoading, setClipLoading] = useState<boolean[]>([]);
+  const [clips, setClips] = useState<string[] | null>(null);
+  const [clipError, setClipError] = useState<(string | null)[]>([]);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
 
-  // render-video state
+  const [storyLoading, setStoryLoading] = useState(false);
+  const [storyboardObj, setStoryboardObj] = useState<Storyboard | null>(null);
+
   const [generating, setGenerating] = useState(false);
   const [responseText, setResponseText] = useState('');
-  const [videoUrl, setVideoUrl]         = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
-  // Step 1: Start creating
+  const [myVideos, setMyVideos] = useState<string[] | null>(null);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [videosError, setVideosError] = useState<string | null>(null);
+
+  const supabase = useSupabaseClient();
+  const user = useUser();
+
   const handleStart = () => {
     setCreating(true);
     setClips(null);
-    setClipError(null);
+    setClipError([]);
+    setClipLoading([]);
+    setSuggestion(null);
+    setStoryboardObj(null);
     setResponseText('');
     setVideoUrl(null);
   };
 
-  // Step 2: Search for clips in storage
-const [suggestion, setSuggestion] = useState<string | null>(null);
-
-const handleSearchClips = async () => {
-  if (!category.trim()) {
-    setClipError('Please enter a category to search.');
-    return;
-  }
-  setClipLoading(true);
-  setClipError(null);
-  setClips(null);
-  setSuggestion(null);
-
-  try {
-    const res = await fetch(`/api/clips?category=${encodeURIComponent(category)}`);
-    const body = await res.json();
-
-    if (!res.ok) {
-      throw new Error(body.error || 'Failed to fetch clips');
+  const handleSearchClips = async () => {
+    if (!category.trim()) {
+      setClipError(['Please enter a category to search.']);
+      return;
     }
-
-    if (!body.clips || body.clips.length === 0) {
-      if (body.suggestion) {
-        setSuggestion(body.suggestion);
-        setClipError(`We couldn't find clips for "${category}".`);
+    setClipLoading([true, true, true]);
+    setClipError([null, null, null]);
+    setClips(null);
+    setSuggestion(null);
+    try {
+      const res = await fetch(`/api/clips?category=${encodeURIComponent(category)}`);
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to fetch clips');
+      if (!body.clips?.length) {
+        setClipError([`No clips for "${category}".`]);
+        setSuggestion(body.suggestion || null);
+        setClipLoading([false, false, false]);
       } else {
-        setClipError("Sorry, we don't support your business yet.");
+        setClips(body.clips);
+        setClipLoading([false, false, false]);
       }
-    } else {
-      setClips(body.clips);
+    } catch (e: any) {
+      setClipError([e.message]);
+      setClipLoading([false, false, false]);
     }
-  } catch (err: any) {
-    setClipError(err.message || 'Network error fetching clips');
-  } finally {
-    setClipLoading(false);
-  }
-};
+  };
 
+  const handleReplaceClip = async (idx: number) => {
+    if (!clips) return;
+    setClipLoading(prev => prev.map((b, i) => i === idx ? true : b));
+    setClipError(prev => prev.map((e, i) => i === idx ? null : e));
+    try {
+      const excludes = clips.filter((_, i) => i !== idx)
+        .map(u => `exclude=${encodeURIComponent(u)}`).join('&');
+      const res = await fetch(
+        `/api/clips?category=${encodeURIComponent(category)}&count=1&${excludes}`
+      );
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to replace clip');
+      setClips(prev => prev!.map((c, i) => i === idx ? body.clips[0] : c));
+    } catch (e: any) {
+      setClipError(prev => prev.map((err, i) => i === idx ? e.message : err));
+    } finally {
+      setClipLoading(prev => prev.map((b, i) => i === idx ? false : b));
+    }
+  };
 
-  // Step 3: Generate final video
-// inside StudioClient:
-
-// studio-client.tsx — inside StudioClient
-
-const handleGenerate = async () => {
-  setGenerating(true);
+const handleGenerateStoryboard = useCallback(async () => {
+  if (!clips) return;
+  setStoryLoading(true);
+  setStoryboardObj(null);
   setResponseText('');
-  setVideoUrl(null);
+
+  console.log('🛰️ Sending storyboard request:', {
+    businessName,
+    category,
+    clipUrls: clips,
+  });
+
   try {
-    const formData = new FormData();
-    formData.append('businessName', businessName);
-    formData.append('category',     category);
-    // append each clip URL one by one
-    (clips ?? []).forEach((url) => {
-      formData.append('clips', url);
-    });
-    if (logoFile) {
-      formData.append('logo', logoFile);
-    }
-
-    // DEBUG: make sure the browser actually sees these keys
-    console.log('📝 Sending FormData entries:');
-    for (const [key, val] of formData.entries()) {
-      console.log(key, val);
-    }
-
-    const res = await fetch('/api/render-video', {
+    const res = await fetch('/api/storyboard', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessName, category, clipUrls: clips }),
     });
 
-    const payload = await res
-      .json()
-      .catch(async () => {
-        const text = await res.text();
-        throw new Error(`Invalid JSON from server: ${text}`);
-      });
+    // Read the JSON exactly once
+    const payload = await res.json();
+    console.log('📜 Storyboard endpoint response:', payload);
 
     if (!res.ok) {
-      setResponseText(payload.error || 'Unknown server error');
-    } else {
-      setResponseText('✅ Video generated successfully!');
-      setVideoUrl(payload.videoUrl);
+      throw new Error(payload.error || 'Storyboard generation failed');
     }
-  } catch (err: any) {
-    console.error('Frontend fetch error:', err);
-    setResponseText(err.message);
+
+    // Parse the returned storyboard (string or object)
+    const parsed: Storyboard =
+      typeof payload.storyboard === 'string'
+        ? JSON.parse(payload.storyboard)
+        : payload.storyboard;
+
+    setStoryboardObj(parsed);
+  } catch (e: any) {
+    setResponseText(e.message || 'Error generating storyboard');
   } finally {
-    setGenerating(false);
+    setStoryLoading(false);
   }
-};
+}, [businessName, category, clips]);
 
 
+  const updateItemText = (idx: number, text: string) => {
+    if (!storyboardObj) return;
+    const seq = storyboardObj.sequence.map((item, i) =>
+      i === idx ? { ...item, text } : item
+    );
+    const voice = seq.map(i => i.text).join(' ');
+    setStoryboardObj({ sequence: seq, voiceover: voice });
+  };
+
+  const handleGenerateVideo = async () => {
+    setGenerating(true);
+    setResponseText('');
+    try {
+      const form = new FormData();
+      form.append('businessName', businessName);
+      form.append('category', category);
+      clips?.forEach((u) => form.append('clips', u));
+     // ✏️ Send the edited storyboard JSON
+      if (storyboardObj) {
+      form.append('storyboard', JSON.stringify(storyboardObj.sequence));
+      form.append('voiceover', storyboardObj.voiceover);
+    }
+      if (logoFile) form.append('logo', logoFile);
+      const res = await fetch('/api/render-video', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setVideoUrl(data.videoUrl);
+      setResponseText('✅ Video generated successfully!');
+    } catch (e: any) {
+      setResponseText(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    setVideosLoading(true);
+    fetch('/api/my-videos')
+      .then(r => r.json().then(b => {
+        if (!r.ok) throw new Error(b.error || 'Failed to fetch videos');
+        setMyVideos(b.videos);
+      }))
+      .catch(e => setVideosError(e.message))
+      .finally(() => setVideosLoading(false));
+  }, [user]);
 
   return (
     <main className="w-full container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Video Studio</h1>
 
-      {/* === Step 0: initial view === */}
       {!creating && (
         <section className="space-y-4">
-          <button
-            onClick={handleStart}
-            className="bg-primary text-white px-4 py-2 rounded-lg"
-          >
+          <button onClick={handleStart} className="bg-primary text-white px-4 py-2 rounded-lg">
             Create New Video
           </button>
-
           <div className="bg-card p-4 border rounded-lg shadow-sm">
             <h2 className="font-semibold text-lg mb-2">My Videos</h2>
-            <p className="text-sm text-muted-foreground">
-              You haven’t created any videos yet.
-            </p>
+            {videosLoading && <p>Loading your videos…</p>}
+            {videosError && <p className="text-red-600">Error loading videos: {videosError}</p>}
+            {myVideos && myVideos.length === 0 && (
+              <p className="text-sm text-muted-foreground">You haven’t created any videos yet.</p>
+            )}
+            {myVideos && myVideos.length > 0 && (
+              <div className="flex gap-4 overflow-x-auto">
+                {myVideos.map(url => (
+                  <video key={url} src={url} controls className="w-36 h-64 object-cover rounded-lg" />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
-      {/* === Step 1: form to enter details & search clips === */}
-      {creating && clips === null && !clipError && !clipLoading && (
+      {creating && !clips && (
         <section className="bg-card rounded-xl p-6 border shadow-sm flex flex-col gap-4 max-w-md">
           <h2 className="font-semibold text-xl">Video Details</h2>
-
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Business Name</label>
             <input
               type="text"
               value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              required
+              onChange={e => setBusinessName(e.target.value)}
               className="border rounded-lg p-2"
             />
           </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Business Category</label>
             <input
               type="text"
               placeholder="e.g. sneakers, coffee shop"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              required
+              onChange={e => setCategory(e.target.value)}
               className="border rounded-lg p-2"
             />
           </div>
-
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Upload Logo (optional)</label>
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+              onChange={e => setLogoFile(e.target.files?[0]:null)}
               className="border rounded-lg p-2"
             />
           </div>
-
-          <button
-            onClick={handleSearchClips}
-            className="bg-primary text-white px-4 py-2 rounded-lg w-fit"
-          >
+          <button onClick={handleSearchClips} className="bg-primary text-white px-4 py-2 rounded-lg w-fit">
             Search Clips
           </button>
+          {clipError.some(Boolean) && (
+            <div className="text-red-600 space-y-2">
+              {clipError.map((err, i) => err && <p key={i}>{err}</p>)}
+              {suggestion && (
+                <div className="text-yellow-700 bg-yellow-100 p-2 rounded-md">
+                  Did you mean{' '}
+                  <button onClick={()=>{setCategory(suggestion);handleSearchClips();}} className="underline font-semibold">
+                    {suggestion}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
 
-      {/* === Step 2: clip-loading & errors === */}
-      {creating && clipError && (
-        <div className="text-red-600 space-y-2">
-          <p>{clipError}</p>
-          {suggestion && (
-            <div className="text-yellow-700 bg-yellow-100 p-2 rounded-md">
-              Did you mean{' '}
-              <button
-                onClick={() => {
-                  setCategory(suggestion);
-                  handleSearchClips(); // Retry with suggestion
-                }}
-                className="underline font-semibold"
-              >
-                {suggestion}
-              </button>
-              ?
-            </div>
-          )}
-        </div>
-      )}
-
-
-      {/* === Step 3: preview clips & generate button === */}
       {creating && clips && (
-        <section className="space-y-4">
-          <div className="flex gap-4 overflow-x-auto">
-            {clips.map((url) => (
-              <video
-                key={url}
-                src={url}
-                muted
-                autoPlay
-                loop
-                className="w-36 h-64 object-cover rounded-lg"
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg"
-          >
-            {generating ? 'Generating…' : 'Generate Video'}
-          </button>
-
-          {responseText && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-md text-sm">
-              {responseText}
+        <>
+          <section className="space-y-4">
+            <div className="flex gap-4 overflow-x-auto">
+              {clips.map((url, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <video src={url} muted autoPlay loop className="w-36 h-64 object-cover rounded-lg" />
+                  <button
+                    onClick={() => handleReplaceClip(i)}
+                    disabled={clipLoading[i]}
+                    className="mt-2 px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                  >
+                    {clipLoading[i] ? 'Loading…' : 'New Clip'}
+                  </button>
+                  {clipError[i] && <p className="text-red-500 text-sm">{clipError[i]}</p>}
+                </div>
+              ))}
             </div>
+            {!storyboardObj && (
+              <button
+                onClick={handleGenerateStoryboard}
+                disabled={storyLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                {storyLoading ? 'Generating Text…' : 'Generate Text'}
+              </button>
+            )}
+          </section>
+          {storyboardObj && (
+            <section className="bg-card p-4 border rounded-lg shadow-sm">
+              <h2 className="font-semibold text-lg mb-2">Storyboard Preview</h2>
+              {storyboardObj.sequence.map((itm, i) => (
+                <div key={i} className="mb-2">
+                  <p className="text-sm font-medium">{itm.clip ?? 'Text Slide'}</p>
+                  <input
+                    type="text"
+                    value={itm.text}
+                    onChange={e => updateItemText(i, e.target.value)}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+              ))}
+              <h2 className="font-semibold text-lg mb-2">Voiceover</h2>
+              <textarea
+                rows={4}
+                value={storyboardObj.voiceover}
+                onChange={e => setStoryboardObj({ sequence: storyboardObj.sequence, voiceover: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => setStoryboardObj(null)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+                >
+                  Regenerate Text
+                </button>
+                <button
+                  onClick={handleGenerateVideo}
+                  disabled={generating}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg"
+                >
+                  {generating ? 'Rendering Video…' : 'Generate Video'}
+                </button>
+              </div>
+            </section>
           )}
+        </>
+      )}
 
-          {videoUrl && (
-            <video
-              src={videoUrl}
-              controls
-              className="w-full mt-4 rounded-lg border shadow-sm"
-            />
-          )}
-        </section>
+      {responseText && <div className="mt-4 p-4 bg-muted/50 rounded-md text-sm">{responseText}</div>}
+      {videoUrl && (
+        <video src={videoUrl} controls className="w-full mt-4 rounded-lg border shadow-sm" />
       )}
     </main>
   );

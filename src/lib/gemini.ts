@@ -1,11 +1,30 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!, {
-  apiVersion: 'v1'
+  apiVersion: 'v1',
 });
 
-export async function generateStoryboard(businessName: string, category: string, clipUrls: string[]) {
-const model = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
+export type StoryItem = {
+  clip: string | null;
+  text: string;
+  duration: number;
+};
+
+export type Storyboard = {
+  sequence: StoryItem[];
+  voiceover: string;
+};
+
+/**
+ * Generates a storyboard object from Gemini, given a business, category, and clip URLs.
+ */
+export async function generateStoryboard(params: {
+  businessName: string;
+  category: string;
+  clipUrls: string[];
+}): Promise<Storyboard> {
+  const { businessName, category, clipUrls } = params;
+  const model = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
 
   const prompt = `
 You are a creative ad writer. Create a short, punchy social media ad using the following info:
@@ -15,41 +34,42 @@ Category: "${category}"
 Clips: ${JSON.stringify(clipUrls)}
 
 1. Create a storyboard: array of objects with:
-   - "clip": use a clip filename from the list, or null for text-only
+   - "clip": use **one of the full URLs** from the Clips list, or null for text-only
    - "text": short marketing phrase for that clip
    - "duration": number of seconds (3–6)
 
 2. Combine all text from all clips into a single "voiceover" string.
 
-Return the result as valid JSON like this:
-
+Return **only valid JSON**, no markdown fences, structured as:
 {
-  "sequence": [ { "clip": "...", "text": "...", "duration": ... }, ... ],
+  "sequence": [
+    { "clip": "https://…mp4", "text": "...", "duration": 4 },
+    …
+  ],
   "voiceover": "..."
 }
 `;
 
-  const result = await model.generateContent(prompt);
-const text = result.response.text();
+  // Call Gemini
+  const res = await model.generateContent(prompt);
+  let text = res.response.text();
 
-// Remove markdown fences if they exist
-const cleaned = text
-  .replace(/```json/g, '')
-  .replace(/```/g, '')
-  .trim();
+  // Strip any code fences
+  text = text.replace(/```json/, '').replace(/```/g, '').trim();
+  // Pull from first brace
+  const start = text.indexOf('{');
+  if (start !== -1) text = text.slice(start);
 
-// Extract from first `{` onward
-const jsonStart = cleaned.indexOf('{');
-const jsonText = cleaned.slice(jsonStart);
-
-let json;
-try {
-  json = JSON.parse(jsonText);
-} catch (err) {
-  console.error('❌ Failed to parse Gemini JSON:', jsonText);
-  throw new Error('Invalid JSON from Gemini');
-}
-
-
-  return json;
+  // Parse and return
+  try {
+    const obj = JSON.parse(text);
+    return obj as Storyboard;
+  } catch (err) {
+    console.warn('generateStoryboard: failed to parse JSON:', text, err);
+    // Fallback: return a minimal placeholder
+    return {
+      sequence: [],
+      voiceover: '',
+    };
+  }
 }

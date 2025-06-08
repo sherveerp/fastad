@@ -23,32 +23,28 @@ export async function GET(req: Request) {
   const url = new URL(req.url)
   const rawCat = url.searchParams.get('category') || ''
   const normalizedCat = normalize(rawCat)
-
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-  if (!baseUrl) {
-    return NextResponse.json({ error: 'Missing SUPABASE_URL' }, { status: 500 })
-  }
+  const count = parseInt(url.searchParams.get('count') || '3', 10)
+  const excludes = url.searchParams.getAll('exclude')
 
   const supabase = createRouteHandlerClient<Database>({ cookies, headers })
 
+  // List all category folders
   const { data: allFolders, error: folderError } = await supabase.storage
     .from('video-assets')
     .list('assets/clips', { limit: 1000 })
-
   if (folderError) {
     console.error('Error listing folders:', folderError)
     return NextResponse.json({ error: folderError.message }, { status: 500 })
   }
 
-  const folders = allFolders?.filter(f => f.name && !f.id?.includes('.')) || []
-  if (folders.length === 0) {
+  const folders = allFolders?.filter(f => f.name && !f.name.includes('.')) || []
+  if (!folders.length) {
     return NextResponse.json({ error: 'No folders found' }, { status: 404 })
   }
 
-  // Find closest folder using Levenshtein distance
+  // Find best matching folder
   let bestMatch = folders[0].name
   let bestScore = distance(normalize(bestMatch), normalizedCat)
-
   for (const folder of folders) {
     const score = distance(normalize(folder.name), normalizedCat)
     if (score < bestScore) {
@@ -56,7 +52,6 @@ export async function GET(req: Request) {
       bestScore = score
     }
   }
-
   if (bestScore > 5) {
     return NextResponse.json({ clips: [], suggestion: null })
   }
@@ -65,18 +60,36 @@ export async function GET(req: Request) {
   const { data: files, error: fileError } = await supabase.storage
     .from('video-assets')
     .list(folderPath, { limit: 1000 })
-
   if (fileError) {
     return NextResponse.json({ error: fileError.message }, { status: 500 })
   }
-
   if (!files || files.length === 0) {
     return NextResponse.json({ clips: [], suggestion: bestMatch })
   }
 
-  const publicBase = baseUrl.replace(/\/$/, '') + `/storage/v1/object/public/video-assets/`
-  const allUrls = files.map(f => publicBase + encodeURI(`${folderPath}/${f.name}`))
+  // Generate public URLs via Supabase helper (no manual encoding)
+  const allUrls = await Promise.all(
+    files.map(async (file) => {
+      const key = `${folderPath}/${file.name}`
+      const { data, error } = supabase.storage
+        .from('video-assets')
+        .getPublicUrl(key)
+      if (error || !data.publicUrl) {
+        throw new Error(error?.message || 'Failed to get public URL')
+      }
+      return data.publicUrl
+    })
+  )
 
-  const picks = pickRandom(allUrls, 3)
-  return NextResponse.json({ clips: picks, suggestion: bestMatch !== rawCat ? bestMatch : null })
+  // Exclude any provided URLs
+  let pool = excludes.length
+    ? allUrls.filter((u) => !excludes.includes(u))
+    : allUrls
+  if (pool.length === 0) pool = allUrls
+
+  const picks = pickRandom(pool, count)
+  return NextResponse.json({
+    clips: picks,
+    suggestion: bestMatch !== rawCat ? bestMatch : null,
+  })
 }
