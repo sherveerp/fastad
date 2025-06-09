@@ -10,7 +10,6 @@
     "remotion-render": "remotion render remotion/index.tsx BusinessVideo out/video.mp4",
     "render-custom": "remotion render remotion/index.tsx studio out/video.mp4 --props='{\"businessName\":\"My Cafe\",\"font\":\"avenir\",\"logoUrl\":\"https://yourcdn.com/logo.png\"}'",
     "seed:pexels": "tsx scripts/seed-pexels.ts"
-    
   },
   "dependencies": {
     "@google/generative-ai": "^0.6.0",

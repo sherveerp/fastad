@@ -1,5 +1,6 @@
 import { registerRoot, Composition } from 'remotion';
-import { BusinessVideo, Storyboard } from './BusinessVideo';
+import { BusinessVideo, Storyboard, calculateTotalFrames } from './BusinessVideo';
+
 
 // Load the public Supabase URL from env (optional in render environment)
 const BASE = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -27,23 +28,26 @@ const demoStoryboard: Storyboard = {
   voiceover: "Welcome to Demo Business. Your trusted solution. Let’s grow together.",
 };
 
-// Calculate total frames: buffer + all clip durations
-const totalDurationFrames =
-  30 + demoStoryboard.sequence.reduce((sum, step) => sum + step.duration * 30, 0);
 
 registerRoot(() => (
   <Composition
     id="studio"
     component={BusinessVideo}
-    durationInFrames={totalDurationFrames}
+    durationInFrames={calculateTotalFrames(demoStoryboard)} 
     fps={30}
     width={1080}
     height={1920}
     defaultProps={{
-      storyboard: { sequence: [], voiceover: '' },
+      storyboard: demoStoryboard,
       clips: [],
       font: 'Arial',
       theme: 'minimalist',
     }}
+    calculateMetadata={({ props }) => ({
+      durationInFrames: props.durationInFrames, 
+      fps: 30,
+      width: 1080,
+      height: 1920,
+    })}
   />
 ));

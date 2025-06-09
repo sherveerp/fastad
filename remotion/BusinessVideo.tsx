@@ -6,6 +6,7 @@ export type Storyboard = {
     clip: string | null;
     text: string;
     duration: number; // in seconds
+    audioUrl?: string;
   }[];
   voiceover: string;
 };
@@ -16,43 +17,40 @@ export const BusinessVideo: React.FC<{
   theme: string;
   font: string;
   logoUrl?: string;
-  voiceoverUrl?: string;
   backgroundMusicUrl?: string;
+  durationInFrames: number; // ✅ add this prop
 }> = ({
   storyboard,
   clips,
   theme,
   font,
   logoUrl,
-  voiceoverUrl,
   backgroundMusicUrl,
+  durationInFrames, // ✅ use this
 }) => {
   const fps = 30;
-  let frameOffset = 30;
+  const introFrames = 30;
+  let frameOffset = introFrames;
 
-  // Build each clip/text sequence
   const sequences = storyboard.sequence.map((item, index) => {
-    const startFrame = frameOffset;
     const durationFrames = Math.round(item.duration * fps);
+    const startFrame = frameOffset;
     frameOffset += durationFrames;
 
-    const fullClipUrl = clips[index] ?? '';
-
     return (
-      <Sequence key={index} from={startFrame} durationInFrames={durationFrames}>
+      <Sequence
+        key={`seq-${index}`}
+        from={startFrame}
+        durationInFrames={durationFrames}
+      >
         <AbsoluteFill>
-          {fullClipUrl ? (
-            <Video
-              src={fullClipUrl}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) =>
-                console.error('❌ Video failed to load:', fullClipUrl, e)
-              }
-            />
-          ) : (
-            <AbsoluteFill style={{ backgroundColor: 'gray' }} />
-          )}
-
+          <Video
+            src={clips[index]}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) =>
+              console.error('❌ Video failed to load:', clips[index], e)
+            }
+          />
           <AbsoluteFill
             style={{
               display: 'flex',
@@ -63,17 +61,21 @@ export const BusinessVideo: React.FC<{
           >
             <ThemedText text={item.text} theme={theme} font={font} />
           </AbsoluteFill>
+          {item.audioUrl && (
+            <Audio
+              src={item.audioUrl}
+              startFrom={0}
+              endAt={durationFrames}
+            />
+          )}
         </AbsoluteFill>
       </Sequence>
     );
   });
 
-  const totalFrames = frameOffset;
-
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
-      {/* Intro frame with logo + first text */}
-      <Sequence from={0} durationInFrames={30}>
+      <Sequence from={0} durationInFrames={introFrames}>
         <AbsoluteFill
           style={{
             display: 'flex',
@@ -102,22 +104,26 @@ export const BusinessVideo: React.FC<{
         </AbsoluteFill>
       </Sequence>
 
-      {/* Voiceover track */}
-      {voiceoverUrl && (
-        <Sequence from={0} durationInFrames={totalFrames}>
-          <Audio src={voiceoverUrl} />
-        </Sequence>
-      )}
-
-      {/* Background music */}
+      {/* 🎵 Background music spans exact total duration */}
       {backgroundMusicUrl && (
-        <Sequence from={0} durationInFrames={totalFrames}>
+        <Sequence from={0} durationInFrames={durationInFrames}>
           <Audio src={backgroundMusicUrl} volume={0.2} />
         </Sequence>
       )}
 
-      {/* Main video sequences */}
       {sequences}
     </AbsoluteFill>
+  );
+};
+
+// ✅ Utility to use in route or index.tsx
+export const calculateTotalFrames = (storyboard: Storyboard, fps = 30): number => {
+  const intro = 30;
+  return (
+    intro +
+    storyboard.sequence.reduce(
+      (sum, item) => sum + Math.round(item.duration * fps),
+      0
+    )
   );
 };

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
-import { spawn } from 'child_process';
 import path from 'path';
+import { spawn } from 'child_process';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID =
@@ -14,10 +14,6 @@ if (!ELEVENLABS_API_KEY) {
 /**
  * Generate a voiceover MP3 using ElevenLabs TTS API and write it to outputPath.
  * If ElevenLabs rejects due to unusual activity, falls back to silent audio.
- *
- * @param text - The text to synthesize.
- * @param outputPath - Filesystem path where the audio will be saved.
- * @param fallbackDurationSec - Duration in seconds for silent fallback.
  */
 export async function generateVoiceover(
   text: string,
@@ -53,7 +49,6 @@ export async function generateVoiceover(
   } catch (err: any) {
     let details: any;
     try {
-      // Try to parse JSON error body (if any)
       if (err.response?.data) {
         const chunks: Buffer[] = [];
         for await (const chunk of err.response.data) {
@@ -68,7 +63,7 @@ export async function generateVoiceover(
 
     console.warn('❌ ElevenLabs TTS API failed:', details);
 
-    // Fallback to silent audio if Free Tier abuse detected
+    // Fallback to silent audio
     if (details?.detail?.status === 'detected_unusual_activity') {
       console.warn(`⏭ Falling back to ${fallbackDurationSec}s of silence`);
       await new Promise<void>((resolve, reject) => {
@@ -101,4 +96,26 @@ export async function generateVoiceover(
       }`
     );
   }
+}
+
+/**
+ * Generate multiple voiceover clips from an array of sentences.
+ * Returns an array of output file paths.
+ */
+export async function generateVoiceoverClips(sentences: string[]): Promise<string[]> {
+  const tmpDir = path.join('/tmp', `voice-${Date.now()}`);
+  await fs.promises.mkdir(tmpDir, { recursive: true });
+
+  const outputPaths: string[] = [];
+
+  for (let i = 0; i < sentences.length; i++) {
+    const text = sentences[i].trim();
+    if (!text) continue;
+
+    const outputPath = path.join(tmpDir, `line-${i}.mp3`);
+    await generateVoiceover(text, outputPath);
+    outputPaths.push(outputPath);
+  }
+
+  return outputPaths;
 }
