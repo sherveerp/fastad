@@ -13,7 +13,6 @@ export type Storyboard = {
 
 export const BusinessVideo: React.FC<{
   storyboard: Storyboard;
-  clips: string[];
   theme: string;
   font: string;
   logoUrl?: string;
@@ -21,7 +20,6 @@ export const BusinessVideo: React.FC<{
   durationInFrames: number; // ✅ add this prop
 }> = ({
   storyboard,
-  clips,
   theme,
   font,
   logoUrl,
@@ -45,10 +43,10 @@ export const BusinessVideo: React.FC<{
       >
         <AbsoluteFill>
           <Video
-            src={clips[index]}
+            src={item.clip}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) =>
-              console.error('❌ Video failed to load:', clips[index], e)
+              console.error('❌ Video failed to load:', item.clip, e)
             }
           />
           <AbsoluteFill

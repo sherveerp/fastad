@@ -67,11 +67,19 @@ export async function POST(req: Request) {
 
       return supabase.storage.from('processed-clips').getPublicUrl(clipKey).data.publicUrl;
     }));
+    if (clips.length !== processedClips.length) {
+      throw new Error("Mismatch between original and processed clips");
+    }
+
 
     const storyboard: Storyboard = editedStoryboard && editedVoiceover ? {
       sequence: JSON.parse(editedStoryboard),
       voiceover: editedVoiceover
     } : await generateStoryboard({ businessName, category, clipUrls: processedClips });
+    storyboard.sequence.forEach((item, idx) => {
+      item.clip = processedClips[idx];
+    });
+
     console.log('📋 Storyboard before audio:', storyboard.sequence.map(s => ({
       text: s.text,
       duration: s.duration,
@@ -110,7 +118,7 @@ export async function POST(req: Request) {
         const totalFrames = calculateTotalFrames(storyboard);
     console.log('🧮 Total frames calculated:', totalFrames);
 
-    const renderProps = { storyboard, clips: processedClips, font, logoUrl, backgroundMusicUrl, theme, durationInFrames: totalFrames};
+    const renderProps = { storyboard,font, logoUrl, backgroundMusicUrl, theme, durationInFrames: totalFrames};
     const propsFile = `/tmp/props-${uuidv4()}.json`;
     await fs.writeFile(propsFile, JSON.stringify(renderProps));
     console.log('🛠 Render props:', JSON.stringify(renderProps, null, 2));

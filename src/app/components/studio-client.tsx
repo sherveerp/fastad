@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
+import SocialShareButtons from "./socialsharebuttons";
 
 interface StoryItem {
   clip: string | null;
@@ -349,12 +350,14 @@ const handleGenerateStoryboard = useCallback(async () => {
       )}
 
       {responseText && <div className="mt-4 p-4 bg-muted/50 rounded-md text-sm">{responseText}</div>}
-      {videoUrl && (
-        <video
-          src={videoUrl}
-          controls
-          className="w-96 mx-auto mt-4 rounded-lg border shadow-sm"
-        />      )}
+
+        {videoUrl && (
+          <>
+            <video src={videoUrl} controls className="w-full max-w-md rounded-lg" />
+            <SocialShareButtons videoUrl={videoUrl} />
+          </>
+        )}
+
     </main>
   );
 }
