@@ -1,4 +1,5 @@
 // src/app/dashboard/page.tsx
+export const dynamic = 'force-dynamic';
 
 import { cookies } from 'next/headers'
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -8,18 +9,26 @@ import DashboardNavbar from '@/app/components/dashboard-navbar'
 import SubscriptionCheck from '@/app/components/subscription-check'
 import { InfoIcon, UserCircle, Video } from 'lucide-react'
 import Link from 'next/link'
+import { CreditPackButtons } from '@/app/components/CreditPackButtons'
 
 export default async function DashboardPage() {
   // Pass the cookies helper directly, not wrapped in a lambda
   const supabase = createServerComponentClient<Database>({ cookies })
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/sign-in')
 
-  if (!user) {
-    redirect('/sign-in')
-  }
+  // ✅ Ensure the user exists in the `users` table
+  await supabase
+    .from('users')
+    .upsert({ id: user.id }, { onConflict: 'id' })
+
+  const { data: userData } = await supabase
+    .from('users')
+    .select('credits', { head: false })
+    .eq('id', user.id)
+    .single();
+
 
   return (
     <SubscriptionCheck>
@@ -35,13 +44,21 @@ export default async function DashboardPage() {
           </header>
 
           <section className="bg-card rounded-xl p-6 border shadow-sm">
-            <div className="flex items-center gap-4 mb-6">
-              <UserCircle size={48} className="text-primary" />
-              <div>
-                <h2 className="font-semibold text-xl">User Profile</h2>
-                <p className="text-sm text-muted-foreground">{user.email}</p>
+              <div className="flex items-center gap-4 mb-6">
+                <UserCircle size={48} className="text-primary" />
+                <div>
+                  <h2 className="font-semibold text-xl">User Profile</h2>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                </div>
               </div>
-            </div>
+
+              <div className="mt-6">
+                <h3 className="font-medium text-lg mb-2">Credits</h3>
+                <div className="text-sm text-muted-foreground mb-4">
+                  You have <strong>{userData?.credits ?? 0}</strong> credits remaining.
+                </div>
+                <CreditPackButtons />
+              </div>
             <div className="bg-muted/50 rounded-lg p-4 overflow-hidden">
               <pre className="text-xs font-mono max-h-48 overflow-auto">
                 {JSON.stringify(user, null, 2)}
