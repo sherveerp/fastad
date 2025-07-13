@@ -41,8 +41,13 @@ export default function StudioClient() {
 
   const supabase = useSupabaseClient();
   const user = useUser();
+  const [credits, setCredits] = useState<number | null>(null);
 
   const handleStart = () => {
+    if ((credits ?? 0) < 1) {
+      alert('You do not have enough credits to create a video.');
+      return;
+    } 
     setCreating(true);
     setClips(null);
     setClipError([]);
@@ -172,6 +177,20 @@ const handleGenerateStoryboard = useCallback(async () => {
       if (!res.ok) throw new Error(data.error);
       setVideoUrl(data.videoUrl);
       setResponseText('✅ Video generated successfully!');
+    console.log('📡 Calling use_one_credit with user ID:', user?.id);
+
+    const { data: newCredits, error: creditError } = await supabase.rpc('use_one_credit', {
+      p_user_id: user?.id,
+    });
+    if (creditError != null || typeof newCredits !== 'number') {
+      console.error('Failed to deduct credit:', creditError);
+      setResponseText('⚠️ Video was created but credit deduction failed.');
+    } else {
+      setCredits(newCredits);
+    }
+    console.log('✅ Updated credits:', newCredits);
+    console.log('📢 responseText:', responseText);
+
     } catch (e: any) {
       setResponseText(e.message);
     } finally {
@@ -191,12 +210,31 @@ const handleGenerateStoryboard = useCallback(async () => {
       .finally(() => setVideosLoading(false));
   }, [user]);
 
+  useEffect(() => {
+  const fetchCredits = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', user.id)
+      .single();
+    if (error) {
+      console.error('Failed to fetch credits:', error);
+      return;
+    }
+    setCredits(data.credits);
+  };
+
+  fetchCredits();
+  }, [user]);
+
   return (
     <main className="w-full container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Video Studio</h1>
 
       {!creating && (
         <section className="space-y-4">
+          <p className="text-sm text-muted-foreground">Credits: {credits ?? 'Loading...'}</p>
           <button onClick={handleStart} className="bg-primary text-white px-4 py-2 rounded-lg">
             Create New Video
           </button>
