@@ -22,16 +22,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Company Column */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-4">Company</h3>
-            <ul className="space-y-2">
-              <li><Link href="#" className="text-gray-600 hover:text-blue-600">About</Link></li>
-              <li><Link href="#" className="text-gray-600 hover:text-blue-600">Blog</Link></li>
-              <li><Link href="#" className="text-gray-600 hover:text-blue-600">Careers</Link></li>
-              <li><Link href="#" className="text-gray-600 hover:text-blue-600">Press</Link></li>
-            </ul>
-          </div>
 
           {/* Resources Column */}
           <div>

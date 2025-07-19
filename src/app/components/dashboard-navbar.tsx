@@ -11,8 +11,9 @@ export default function DashboardNavbar() {
   const user = useUser();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    // Client‐side redirect after sign-out
+    await fetch('/api/signout', {
+      method: 'POST',
+    });
     window.location.href = '/sign-in';
   };
 
