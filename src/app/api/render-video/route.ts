@@ -14,6 +14,18 @@ import type { Database } from '@/types/supabase';
 import { getAudioDurationInSeconds } from '@/lib/getAudioDuration';
 import { calculateTotalFrames } from '../../../../remotion/utils/calculateTotalFrames';
 
+async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const reader = stream.getReader();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
+}
+
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = createClient(
@@ -29,20 +41,44 @@ export async function POST(req: Request) {
     const businessName = formData.get('businessName') as string;
     const category = formData.get('category') as string;
     const font = formData.get('font') as string;
-    const logoFile = formData.get('logo') as File | null;
+    const logoFile = formData.get('logo');
+    console.log('📥 logoFile:', logoFile);
+
     const clips = formData.getAll('clips') as string[];
     const videoId = formData.get('videoId') as string | null;
     const theme = formData.get('theme') as string;
+    const logoPosition = formData.get('logoPosition')?.toString() || 'top';
 
     const editedStoryboard = formData.get('storyboard') as string | null;
     const editedVoiceover = formData.get('voiceover') as string | null;
 
     let logoUrl = '';
-    if (logoFile) {
-      const logoKey = `logos/${uuidv4()}-${logoFile.name}`;
-      await supabase.storage.from('user-logos').upload(logoKey, Buffer.from(await logoFile.arrayBuffer()), { contentType: logoFile.type });
+    if (
+      logoFile &&
+      typeof logoFile === 'object' &&
+      'stream' in logoFile &&
+      typeof logoFile.stream === 'function'
+    ) {
+      const logoKey = `logos/${uuidv4()}-logo.png`; // safer name
+      const buffer = await streamToBuffer(logoFile.stream());
+
+      const { error: uploadErr } = await supabase.storage
+        .from('user-logos')
+        .upload(logoKey, buffer, {
+          contentType: logoFile.type || 'image/png',
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        console.error('❌ Failed to upload logo:', uploadErr);
+        throw new Error('Logo upload failed');
+      }
+
       logoUrl = supabase.storage.from('user-logos').getPublicUrl(logoKey).data.publicUrl;
+      console.log('🖼️ Logo uploaded:', logoUrl);
     }
+
+
 
     const processedClips = await Promise.all(clips.map(async clipUrl => {
       const baseName = `${uuidv4()}-${path.basename(new URL(clipUrl).pathname)}`;
@@ -118,7 +154,7 @@ export async function POST(req: Request) {
         const totalFrames = calculateTotalFrames(storyboard);
     console.log('🧮 Total frames calculated:', totalFrames);
 
-    const renderProps = { storyboard,font, logoUrl, backgroundMusicUrl, theme, durationInFrames: totalFrames};
+    const renderProps = { storyboard,font, logoUrl, logoPosition, backgroundMusicUrl, theme, durationInFrames: totalFrames};
     const propsFile = `/tmp/props-${uuidv4()}.json`;
     await fs.writeFile(propsFile, JSON.stringify(renderProps));
     console.log('🛠 Render props:', JSON.stringify(renderProps, null, 2));
@@ -174,6 +210,7 @@ await new Promise<void>((resolve, reject) => {
       category,
       font,
       logo_url: logoUrl,
+      logoPosition,
       video_url: videoUrl
     });
 
@@ -183,3 +220,4 @@ await new Promise<void>((resolve, reject) => {
     return NextResponse.json({ error: error.message || 'Internal error' }, { status: 500 });
   }
 }
+

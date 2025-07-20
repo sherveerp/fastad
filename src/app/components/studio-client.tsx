@@ -20,6 +20,7 @@ export default function StudioClient() {
   const [businessName, setBusinessName] = useState('');
   const [category, setCategory] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPosition, setLogoPosition] = useState<'top' | 'bottom' | 'both'>('top');
 
   const [clipLoading, setClipLoading] = useState<boolean[]>([]);
   const [clips, setClips] = useState<string[] | null>(null);
@@ -164,6 +165,12 @@ const handleGenerateStoryboard = useCallback(async () => {
       form.append('businessName', businessName);
       form.append('category', category);
       form.append('theme', theme);
+      if (logoFile) {
+            console.log('📤 Uploading logoFile:', logoFile);
+        form.append('logo', logoFile);
+        form.append('logoPosition', logoPosition);
+      }
+
       clips?.forEach((u) => form.append('clips', u));
      // ✏️ Send the edited storyboard JSON
       if (storyboardObj) {
@@ -171,7 +178,7 @@ const handleGenerateStoryboard = useCallback(async () => {
       form.append('voiceover', storyboardObj.voiceover);
       
     }
-      if (logoFile) form.append('logo', logoFile);
+
       const res = await fetch('/api/render-video', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -295,10 +302,27 @@ const handleGenerateStoryboard = useCallback(async () => {
             <input
               type="file"
               accept="image/*"
-              onChange={e => setLogoFile(e.target.files?[0]:null)}
+              onChange={e => setLogoFile(e.target.files ? e.target.files[0] : null)}
               className="border rounded-lg p-2"
             />
+            {logoFile && (
+              <p className="text-sm text-muted-foreground">Selected: {logoFile.name}</p>
+            )}
+
           </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Logo Position</label>
+            <select
+              value={logoPosition}
+              onChange={(e) => setLogoPosition(e.target.value as 'top' | 'bottom' | 'both')}
+              className="border rounded-lg p-2"
+            >
+              <option value="top">Top Center</option>
+              <option value="bottom">Bottom Center</option>
+              <option value="both">Top & Bottom</option>
+            </select>
+          </div>
+
           <button onClick={handleSearchClips} className="bg-primary text-white px-4 py-2 rounded-lg w-fit">
             Search Clips
           </button>
@@ -351,7 +375,7 @@ const handleGenerateStoryboard = useCallback(async () => {
               <h2 className="font-semibold text-lg mb-2">Storyboard Preview</h2>
               {storyboardObj.sequence.map((itm, i) => (
                 <div key={i} className="mb-2">
-                  <p className="text-sm font-medium">{itm.clip ?? 'Text Slide'}</p>
+                <p className="text-sm font-medium">Scene {i + 1}</p>
                   <input
                     type="text"
                     value={itm.text}

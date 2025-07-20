@@ -16,6 +16,7 @@ export const BusinessVideo: React.FC<{
   theme: string;
   font: string;
   logoUrl?: string;
+  logoPosition?: 'top' | 'bottom' | 'both';
   backgroundMusicUrl?: string;
   durationInFrames: number; // ✅ add this prop
 }> = ({
@@ -23,12 +24,34 @@ export const BusinessVideo: React.FC<{
   theme,
   font,
   logoUrl,
+  logoPosition = 'top',
   backgroundMusicUrl,
   durationInFrames, // ✅ use this
 }) => {
   const fps = 30;
   const introFrames = 30;
   let frameOffset = introFrames;
+
+  const Logo = ({ position }: { position: 'top' | 'bottom' }) => (
+      <AbsoluteFill
+        style={{
+          justifyContent: position === 'top' ? 'flex-start' : 'flex-end',
+          alignItems: 'center',
+          padding: 60,
+          pointerEvents: 'none',
+        }}
+      >
+        <Img
+          src={logoUrl!}
+          style={{
+            width: '25%', 
+            height: 'auto',
+            maxHeight: '20%',
+            objectFit: 'contain',
+          }}
+        />
+      </AbsoluteFill>
+    );
 
   const sequences = storyboard.sequence.map((item, index) => {
     const durationFrames = Math.round(item.duration * fps);
@@ -66,43 +89,31 @@ export const BusinessVideo: React.FC<{
               endAt={durationFrames}
             />
           )}
+
         </AbsoluteFill>
       </Sequence>
     );
   });
 
+  const topLogo = logoUrl && (logoPosition === 'top' || logoPosition === 'both') && (
+    <Sequence from={0} durationInFrames={durationInFrames}>
+      <Logo position="top" />
+    </Sequence>
+  );
+
+  const bottomLogo = logoUrl && (logoPosition === 'bottom' || logoPosition === 'both') && (
+    <Sequence from={0} durationInFrames={durationInFrames}>
+      <Logo position="bottom" />
+    </Sequence>
+  );
+
+
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
       <Sequence from={0} durationInFrames={introFrames}>
-        <AbsoluteFill
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            backgroundColor: 'black',
-          }}
-        >
-          {logoUrl && (
-            <Img
-              src={logoUrl}
-              style={{
-                width: 200,
-                height: 200,
-                objectFit: 'contain',
-                marginBottom: 40,
-              }}
-            />
-          )}
-          <ThemedText
-            text={storyboard.sequence[0]?.text || 'Welcome'}
-            theme={theme}
-            font={font}
-          />
-        </AbsoluteFill>
+        {/* intro content */}
       </Sequence>
 
-      {/* 🎵 Background music spans exact total duration */}
       {backgroundMusicUrl && (
         <Sequence from={0} durationInFrames={durationInFrames}>
           <Audio src={backgroundMusicUrl} volume={0.2} />
@@ -110,7 +121,11 @@ export const BusinessVideo: React.FC<{
       )}
 
       {sequences}
+
+      {topLogo}
+      {bottomLogo}
     </AbsoluteFill>
+
   );
 };
 
